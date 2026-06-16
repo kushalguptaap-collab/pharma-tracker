@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agarwal Pharma – Field Tracker (Admin)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f4f3fc; color: #1a1a2e; min-height: 100vh; }
+  .header { background: #3C3489; color: #fff; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; }
+  .header-title { font-size: 17px; font-weight: 600; }
+  .header-sub { font-size: 12px; opacity: 0.75; }
+  .live-badge { background: #1D9E75; color: #fff; font-size: 11px; padding: 3px 10px; border-radius: 20px; display: flex; align-items: center; gap: 5px; }
+  .live-dot { width: 7px; height: 7px; background: #fff; border-radius: 50%; animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .layout { display: grid; grid-template-columns: 300px 1fr; height: calc(100vh - 56px); }
+  .sidebar { background: #fff; border-right: 1px solid #e8e6f5; overflow-y: auto; }
+  .sidebar-header { padding: 14px 16px; border-bottom: 1px solid #e8e6f5; font-size: 12px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.05em; }
+  .metrics-row { display: grid; grid-template-columns: repeat(3,1fr); border-bottom: 1px solid #e8e6f5; }
+  .metric-box { padding: 12px 8px; text-align: center; border-right: 1px solid #e8e6f5; }
+  .metric-box:last-child { border-right: none; }
+  .metric-num { font-size: 22px; font-weight: 700; }
+  .metric-lbl { font-size: 10px; color: #888; margin-top: 2px; }
+  .m-green { color: #1D9E75; } .m-amber { color: #BA7517; } .m-gray { color: #888; }
+  .agent-card { padding: 12px 16px; border-bottom: 1px solid #f0eef8; cursor: pointer; transition: background 0.15s; }
+  .agent-card:hover { background: #f4f3fc; }
+  .agent-card.selected { background: #EEEDFE; border-left: 3px solid #3C3489; }
+  .agent-top { display: flex; align-items: center; gap: 10px; }
+  .agent-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .agent-name { font-size: 14px; font-weight: 600; color: #1a1a2e; }
+  .agent-status { font-size: 11px; margin-top: 2px; }
+  .status-badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+  .s-moving { background: #E1F5EE; color: #0F6E56; }
+  .s-stopped { background: #FAEEDA; color: #854F0B; }
+  .s-offline { background: #f0eef8; color: #888; }
+  .agent-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; margin-top: 8px; }
+  .a-stat { background: #f7f6fd; border-radius: 6px; padding: 5px 6px; text-align: center; }
+  .a-stat-val { font-size: 13px; font-weight: 700; color: #3C3489; }
+  .a-stat-lbl { font-size: 9px; color: #888; }
+  .map-area { position: relative; }
+  #map { width: 100%; height: 100%; }
+  .info-panel { position: absolute; top: 12px; right: 12px; background: #fff; border-radius: 10px; box-shadow: 0 2px 12px rgba(60,52,137,0.15); padding: 14px 16px; width: 240px; z-index: 10; display: none; }
+  .info-panel.visible { display: block; }
+  .info-panel h3 { font-size: 14px; font-weight: 700; color: #3C3489; margin-bottom: 10px; }
+  .info-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px solid #f0eef8; }
+  .info-row:last-child { border: none; }
+  .info-label { color: #888; }
+  .info-val { font-weight: 600; color: #1a1a2e; }
+  .close-info { position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 16px; cursor: pointer; color: #888; }
+  .timeline-panel { position: absolute; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e8e6f5; max-height: 200px; overflow-y: auto; display: none; z-index: 10; }
+  .timeline-panel.visible { display: block; }
+  .tl-header { padding: 10px 16px; font-size: 12px; font-weight: 600; color: #3C3489; border-bottom: 1px solid #e8e6f5; display: flex; justify-content: space-between; align-items: center; background: #EEEDFE; }
+  .tl-body { padding: 8px 16px; }
+  .tl-item { display: flex; gap: 12px; padding: 6px 0; border-bottom: 1px solid #f7f6fd; font-size: 12px; align-items: flex-start; }
+  .tl-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 3px; flex-shrink: 0; }
+  .tl-dot.move { background: #1D9E75; } .tl-dot.stop { background: #EF9F27; }
+  .tl-time { color: #888; min-width: 80px; }
+  .map-controls { position: absolute; top: 12px; left: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 10; }
+  .ctrl-btn { background: #fff; border: 1px solid #e8e6f5; border-radius: 8px; padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer; color: #3C3489; box-shadow: 0 1px 4px rgba(0,0,0,0.1); transition: background 0.15s; white-space: nowrap; }
+  .ctrl-btn:hover { background: #EEEDFE; }
+  .ctrl-btn.active { background: #3C3489; color: #fff; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #3C3489; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 13px; z-index: 999; display: none; box-shadow: 0 4px 16px rgba(60,52,137,0.3); }
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:32px;height:32px;background:#AFA9EC;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:#3C3489;">A</div>
+      <div>
+        <div class="header-title">Agarwal Pharmaceuticals — Field Tracker</div>
+        <div class="header-sub">Admin Dashboard · Live GPS</div>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div style="font-size:12px;color:#AFA9EC;" id="last-refresh">Connecting...</div>
+    <div class="live-badge"><div class="live-dot"></div> LIVE</div>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="metrics-row">
+      <div class="metric-box"><div class="metric-num m-green" id="cnt-active">0</div><div class="metric-lbl">Moving</div></div>
+      <div class="metric-box"><div class="metric-num m-amber" id="cnt-stopped">0</div><div class="metric-lbl">Stopped</div></div>
+      <div class="metric-box"><div class="metric-num m-gray" id="cnt-offline">0</div><div class="metric-lbl">Offline</div></div>
+    </div>
+    <div class="sidebar-header">Field Staff — Today</div>
+    <div id="agent-list"></div>
+  </div>
+
+  <div class="map-area">
+    <div id="map"></div>
+    <div class="map-controls">
+      <button class="ctrl-btn active" id="btn-trail" onclick="toggleTrails()">🛣️ Trails: OFF</button>
+      <button class="ctrl-btn" id="btn-stops" onclick="toggleStops()">🟡 Stop Points: OFF</button>
+      <button class="ctrl-btn" onclick="exportCSV()">📥 Export Excel/CSV</button>
+    </div>
+    <div class="info-panel" id="info-panel">
+      <button class="close-info" onclick="closeInfo()">✕</button>
+      <h3 id="info-name">—</h3>
+      <div class="info-row"><span class="info-label">Status</span><span class="info-val" id="info-status">—</span></div>
+      <div class="info-row"><span class="info-label">Speed now</span><span class="info-val" id="info-speed">—</span></div>
+      <div class="info-row"><span class="info-label">KMs today</span><span class="info-val" id="info-km">—</span></div>
+      <div class="info-row"><span class="info-label">Stops today</span><span class="info-val" id="info-stops">—</span></div>
+      <div class="info-row"><span class="info-label">Last update</span><span class="info-val" id="info-time">—</span></div>
+      <button style="margin-top:10px;width:100%;background:#3C3489;color:#fff;border:none;border-radius:6px;padding:7px;font-size:12px;cursor:pointer;" onclick="showTimeline()">📋 View Full Timeline</button>
+    </div>
+    <div class="timeline-panel" id="timeline-panel">
+      <div class="tl-header">
+        <span id="tl-title">Timeline</span>
+        <button style="background:none;border:none;font-size:16px;cursor:pointer;color:#888;" onclick="document.getElementById('timeline-panel').classList.remove('visible')">✕</button>
+      </div>
+      <div class="tl-body" id="tl-body"></div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, onSnapshot, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCsTRLUOAer2Mpe0k5G3uKfiR_4wfDhOkU",
+  authDomain: "agarwal-pharma-tracker.firebaseapp.com",
+  projectId: "agarwal-pharma-tracker",
+  storageBucket: "agarwal-pharma-tracker.firebasestorage.app",
+  messagingSenderId: "1025894169515",
+  appId: "1:1025894169515:web:6f7d1f5d24b0faa611b0ee"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const AGENTS = [
+  { id: 'vijay',    name: 'Vijay',       color: '#3C3489', bg: '#EEEDFE' },
+  { id: 'sufiyan',  name: 'Sufiyan',     color: '#0F6E56', bg: '#E1F5EE' },
+  { id: 'sachin',   name: 'Sachin',      color: '#854F0B', bg: '#FAEEDA' },
+  { id: 'vijay2',   name: 'Vijay 2',     color: '#993556', bg: '#FBEAF0' },
+  { id: 'devender', name: 'Devender',    color: '#185FA5', bg: '#E6F1FB' },
+  { id: 'dheer',    name: 'Dheer Singh', color: '#3B6D11', bg: '#EAF3DE' },
+];
+
+let agentData = {}, markers = {}, trails = {}, stopMarkers = {};
+let showTrails = false, showStopPts = false, selectedAgent = null;
+let map;
+
+AGENTS.forEach(a => {
+  agentData[a.id] = { ...a, lat: null, lng: null, speed: 0, km: 0, stops: 0, statusText: 'Offline', lastSeen: null, timeline: [], allDocs: [] };
+});
+
+window.initMap = function() {
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: { lat: 28.6139, lng: 77.2090 },
+    zoom: 11,
+    mapTypeControl: false,
+    streetViewControl: false,
+    styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }]
+  });
+  startListening();
+};
+
+function startListening() {
+  AGENTS.forEach(agent => {
+    const q = query(collection(db, 'tracking', agent.id, 'locations'), orderBy('timestamp', 'desc'), limit(500));
+    onSnapshot(q, snapshot => {
+      const docs = snapshot.docs.map(d => d.data()).filter(d => d.lat && d.lng).reverse();
+      if (docs.length === 0) { updateSidebar(); return; }
+
+      const latest = docs[docs.length - 1];
+      const now = Date.now();
+      const lastMs = latest.timestamp?.toMillis ? latest.timestamp.toMillis() : (latest.timestamp * 1000);
+      const isOnline = (now - lastMs) < 3 * 60 * 1000;
+
+      const ad = agentData[agent.id];
+      ad.lat = latest.lat; ad.lng = latest.lng;
+      ad.speed = latest.speed || 0;
+      ad.lastSeen = new Date(lastMs);
+      ad.allDocs = docs;
+
+      // KM calculation
+      let totalKm = 0;
+      for (let i = 1; i < docs.length; i++) {
+        const d = haversine(docs[i-1].lat, docs[i-1].lng, docs[i].lat, docs[i].lng);
+        if (d < 0.3) totalKm += d;
+      }
+      ad.km = totalKm;
+
+      // Stop detection
+      let stopCount = 0, inStop = false, stopStart = null;
+      const timeline = [];
+      for (let i = 0; i < docs.length; i++) {
+        const spd = (docs[i].speed || 0) * 3.6;
+        const t = new Date(docs[i].timestamp?.toMillis ? docs[i].timestamp.toMillis() : docs[i].timestamp * 1000);
+        if (spd < 3) {
+          if (!inStop) { inStop = true; stopStart = t; }
+        } else {
+          if (inStop) {
+            const dur = Math.round((t - stopStart) / 60000);
+            if (dur >= 2) { stopCount++; timeline.push({ type: 'stop', time: stopStart, desc: `Stopped for ${dur} min` }); }
+            inStop = false;
+          }
+          timeline.push({ type: 'move', time: t, desc: `Moving at ${spd.toFixed(0)} km/h` });
+        }
+      }
+      ad.stops = stopCount;
+      ad.timeline = timeline;
+      ad.statusText = !isOnline ? 'Offline' : ((ad.speed * 3.6) < 3 ? 'Stopped' : 'Moving');
+
+      updateMarker(agent, docs, isOnline);
+      updateSidebar();
+      if (selectedAgent === agent.id) updateInfoPanel();
+      document.getElementById('last-refresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
+    });
+  });
+}
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function makeIcon(initials, color) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="48" viewBox="0 0 40 48">
+    <ellipse cx="20" cy="45" rx="9" ry="3" fill="rgba(0,0,0,0.2)"/>
+    <circle cx="20" cy="20" r="18" fill="${color}" stroke="white" stroke-width="2.5"/>
+    <text x="20" y="25" font-size="12" font-weight="700" fill="white" text-anchor="middle" font-family="Segoe UI,sans-serif">${initials}</text>
+  </svg>`;
+  return { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg), scaledSize: new google.maps.Size(40,48), anchor: new google.maps.Point(20,48) };
+}
+
+function updateMarker(agent, docs, isOnline) {
+  if (!map || !agentData[agent.id].lat) return;
+  const ad = agentData[agent.id];
+  const pos = { lat: ad.lat, lng: ad.lng };
+  const color = !isOnline ? '#888' : ((ad.speed*3.6) < 3 ? '#EF9F27' : '#1D9E75');
+  const initials = ad.name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+
+  if (markers[agent.id]) {
+    markers[agent.id].setPosition(pos);
+    markers[agent.id].setIcon(makeIcon(initials, color));
+  } else {
+    markers[agent.id] = new google.maps.Marker({ position: pos, map, title: ad.name, icon: makeIcon(initials, color) });
+    markers[agent.id].addListener('click', () => selectAgent(agent.id));
+  }
+
+  if (trails[agent.id]) trails[agent.id].setMap(null);
+  if (showTrails && docs.length > 1) {
+    trails[agent.id] = new google.maps.Polyline({ path: docs.map(d=>({lat:d.lat,lng:d.lng})), geodesic: true, strokeColor: agent.color, strokeOpacity: 0.8, strokeWeight: 3, map });
+  }
+
+  if (stopMarkers[agent.id]) stopMarkers[agent.id].forEach(m => m.setMap(null));
+  stopMarkers[agent.id] = [];
+  if (showStopPts) {
+    docs.forEach(d => {
+      if ((d.speed||0)*3.6 < 3) {
+        stopMarkers[agent.id].push(new google.maps.Marker({
+          position: {lat:d.lat,lng:d.lng}, map,
+          icon: { path: google.maps.SymbolPath.CIRCLE, scale: 5, fillColor: '#EF9F27', fillOpacity: 1, strokeColor: '#854F0B', strokeWeight: 1.5 }
+        }));
+      }
+    });
+  }
+}
+
+function updateSidebar() {
+  let active=0, stopped=0, offline=0;
+  document.getElementById('agent-list').innerHTML = '';
+  AGENTS.forEach(agent => {
+    const ad = agentData[agent.id];
+    if (ad.statusText==='Moving') active++;
+    else if (ad.statusText==='Stopped') stopped++;
+    else offline++;
+    const initials = ad.name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    const badgeClass = ad.statusText==='Moving'?'s-moving':ad.statusText==='Stopped'?'s-stopped':'s-offline';
+    const spdKmh = (ad.speed*3.6).toFixed(0);
+    const timeStr = ad.lastSeen ? ad.lastSeen.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '—';
+    const card = document.createElement('div');
+    card.className = 'agent-card' + (selectedAgent===agent.id?' selected':'');
+    card.innerHTML = `
+      <div class="agent-top">
+        <div class="agent-avatar" style="background:${agent.bg};color:${agent.color}">${initials}</div>
+        <div style="flex:1;min-width:0">
+          <div class="agent-name">${ad.name}</div>
+          <div class="agent-status"><span class="status-badge ${badgeClass}">${ad.statusText}</span> <span style="font-size:11px;color:#888;margin-left:4px">${ad.statusText!=='Offline'?spdKmh+' km/h':'Last: '+timeStr}</span></div>
+        </div>
+      </div>
+      <div class="agent-stats">
+        <div class="a-stat"><div class="a-stat-val">${ad.km.toFixed(1)}</div><div class="a-stat-lbl">KM today</div></div>
+        <div class="a-stat"><div class="a-stat-val">${ad.stops}</div><div class="a-stat-lbl">Stops</div></div>
+        <div class="a-stat"><div class="a-stat-val">${ad.statusText!=='Offline'?spdKmh:'0'}</div><div class="a-stat-lbl">km/h</div></div>
+      </div>`;
+    card.onclick = () => selectAgent(agent.id);
+    document.getElementById('agent-list').appendChild(card);
+  });
+  document.getElementById('cnt-active').textContent = active;
+  document.getElementById('cnt-stopped').textContent = stopped;
+  document.getElementById('cnt-offline').textContent = offline;
+}
+
+window.selectAgent = function(id) {
+  selectedAgent = id;
+  const ad = agentData[id];
+  if (ad.lat && map) { map.panTo({lat:ad.lat,lng:ad.lng}); map.setZoom(15); }
+  document.getElementById('info-panel').classList.add('visible');
+  updateInfoPanel(); updateSidebar();
+};
+
+function updateInfoPanel() {
+  if (!selectedAgent) return;
+  const ad = agentData[selectedAgent];
+  document.getElementById('info-name').textContent = ad.name;
+  document.getElementById('info-status').textContent = ad.statusText;
+  document.getElementById('info-speed').textContent = (ad.speed*3.6).toFixed(1)+' km/h';
+  document.getElementById('info-km').textContent = ad.km.toFixed(2)+' km';
+  document.getElementById('info-stops').textContent = ad.stops;
+  document.getElementById('info-time').textContent = ad.lastSeen ? ad.lastSeen.toLocaleTimeString() : '—';
+}
+
+window.closeInfo = function() { document.getElementById('info-panel').classList.remove('visible'); selectedAgent=null; updateSidebar(); };
+
+window.showTimeline = function() {
+  if (!selectedAgent) return;
+  const ad = agentData[selectedAgent];
+  document.getElementById('tl-title').textContent = ad.name + ' — Today\'s Timeline';
+  const body = document.getElementById('tl-body');
+  body.innerHTML = ad.timeline.length === 0
+    ? '<div style="padding:12px;color:#888;font-size:13px">No movement data yet.</div>'
+    : ad.timeline.map(t=>`<div class="tl-item"><div class="tl-dot ${t.type}"></div><div class="tl-time">${t.time.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div><div>${t.desc}</div></div>`).join('');
+  document.getElementById('timeline-panel').classList.add('visible');
+};
+
+window.toggleTrails = function() {
+  showTrails = !showTrails;
+  const btn = document.getElementById('btn-trail');
+  btn.textContent = showTrails ? '🛣️ Trails: ON' : '🛣️ Trails: OFF';
+  btn.classList.toggle('active', showTrails);
+  AGENTS.forEach(a => { if(agentData[a.id].allDocs.length) updateMarker(a, agentData[a.id].allDocs, agentData[a.id].statusText!=='Offline'); });
+};
+
+window.toggleStops = function() {
+  showStopPts = !showStopPts;
+  const btn = document.getElementById('btn-stops');
+  btn.textContent = showStopPts ? '🟡 Stop Points: ON' : '🟡 Stop Points: OFF';
+  btn.classList.toggle('active', showStopPts);
+  AGENTS.forEach(a => { if(agentData[a.id].allDocs.length) updateMarker(a, agentData[a.id].allDocs, agentData[a.id].statusText!=='Offline'); });
+};
+
+window.exportCSV = function() {
+  const today = new Date().toLocaleDateString();
+  let csv = `Agarwal Pharmaceuticals - Field Report - ${today}\n\n`;
+  csv += 'Name,Status,KM Today,Stops,Speed (km/h),Last Seen\n';
+  AGENTS.forEach(a => {
+    const ad = agentData[a.id];
+    csv += `${ad.name},${ad.statusText},${ad.km.toFixed(2)},${ad.stops},${(ad.speed*3.6).toFixed(1)},${ad.lastSeen?ad.lastSeen.toLocaleString():'Offline'}\n`;
+  });
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`field_report_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  showToast('Report downloaded!');
+};
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent=msg; t.style.display='block';
+  setTimeout(()=>{t.style.display='none';},2500);
+}
+</script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAL8_3PPQiocYs1xrvhErk4Se3_XNrTXn0&callback=initMap"></script>
+</body>
+</html>
