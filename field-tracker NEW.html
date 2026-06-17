@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Agarwal Pharma – Field Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f4f3fc; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 16px; }
+  .logo-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; margin-top: 8px; }
+  .logo-box { width: 38px; height: 38px; background: #3C3489; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; color: #AFA9EC; flex-shrink:0; }
+  .logo-text { font-size: 14px; font-weight: 700; color: #3C3489; }
+  .logo-sub { font-size: 11px; color: #888; }
+  .card { background: #fff; border-radius: 16px; padding: 20px 18px; width: 100%; max-width: 400px; box-shadow: 0 4px 24px rgba(60,52,137,0.1); margin-bottom: 12px; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+  .screen-title { font-size: 17px; font-weight: 700; color: #3C3489; margin-bottom: 5px; }
+  .screen-sub { font-size: 13px; color: #888; margin-bottom: 18px; }
+  select { width: 100%; padding: 12px 14px; border: 1.5px solid #e8e6f5; border-radius: 10px; font-size: 15px; color: #1a1a2e; background: #f7f6fd; margin-bottom: 12px; outline: none; }
+  select:focus { border-color: #3C3489; }
+  .btn { width: 100%; padding: 13px; border-radius: 10px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.15s; margin-bottom: 8px; }
+  .btn:last-child { margin-bottom: 0; }
+  .btn-primary { background: #3C3489; color: #fff; }
+  .btn-primary:active { transform: scale(0.98); background: #534AB7; }
+  .btn-pause { background: #FAEEDA; color: #854F0B; border: 1.5px solid #FAC775; }
+  .btn-resume { background: #E1F5EE; color: #0F6E56; border: 1.5px solid #7DD4B8; }
+  .btn-danger { background: #fff; color: #A32D2D; border: 1.5px solid #F09595; }
+  .agent-badge { display: flex; align-items: center; gap: 12px; background: #EEEDFE; border-radius: 12px; padding: 11px 14px; margin-bottom: 14px; }
+  .agent-av { width: 42px; height: 42px; border-radius: 50%; background: #3C3489; color: #AFA9EC; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; flex-shrink:0; }
+  .agent-nm { font-size: 15px; font-weight: 700; color: #3C3489; }
+  .agent-dt { font-size: 11px; color: #888; }
+  .status-pill { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+  .status-pill.moving { background: #E1F5EE; color: #0F6E56; }
+  .status-pill.stopped { background: #FAEEDA; color: #854F0B; }
+  .status-pill.paused { background: #EEF0F8; color: #3C3489; border: 1.5px dashed #AFA9EC; }
+  .status-pill.error { background: #FCEBEB; color: #A32D2D; }
+  .status-pill.waiting { background: #f4f3fc; color: #888; border: 1.5px dashed #e8e6f5; }
+  .pulse { width: 10px; height: 10px; border-radius: 50%; background: currentColor; animation: blink 1.2s infinite; flex-shrink: 0; opacity: 0.8; }
+  @keyframes blink { 0%,100%{opacity:0.8} 50%{opacity:0.2} }
+  .stats-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-bottom: 12px; }
+  .stat-box { background: #f7f6fd; border-radius: 10px; padding: 11px 10px; text-align: center; }
+  .stat-val { font-size: 22px; font-weight: 800; color: #3C3489; }
+  .stat-lbl { font-size: 10px; color: #888; margin-top: 2px; }
+  .coord-box { background: #f7f6fd; border-radius: 10px; padding: 11px 14px; font-size: 11px; color: #888; font-family: monospace; line-height: 2; margin-bottom: 12px; }
+  .coord-box span { color: #3C3489; font-weight: 600; }
+  .resumed-banner { background: #E1F5EE; border: 1px solid #7DD4B8; border-radius: 8px; padding: 8px 12px; font-size: 12px; color: #0F6E56; margin-bottom: 12px; display: none; }
+  .log-section { margin-top: 4px; }
+  .log-title { font-size: 12px; font-weight: 700; color: #888; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .log-item { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px solid #f7f6fd; font-size: 12px; align-items: flex-start; }
+  .log-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 3px; flex-shrink: 0; }
+  .log-dot.move { background: #1D9E75; }
+  .log-dot.stop { background: #EF9F27; }
+  .log-dot.pause { background: #3C3489; }
+  .log-dot.resume { background: #534AB7; }
+  .log-dot.system { background: #888; }
+  .log-dot.start { background: #1D9E75; }
+  .log-time { color: #aaa; min-width: 52px; font-size: 11px; }
+  .log-desc { color: #1a1a2e; flex: 1; }
+  .log-badge { font-size: 10px; padding: 1px 6px; border-radius: 20px; margin-left: 4px; background: #f0eef8; color: #3C3489; }
+  .tip { font-size: 11px; color: #aaa; text-align: center; margin-top: 10px; line-height: 1.7; }
+  .pause-reason { width: 100%; padding: 10px 12px; border: 1.5px solid #e8e6f5; border-radius: 8px; font-size: 13px; margin-bottom: 10px; outline: none; background: #f7f6fd; }
+</style>
+</head>
+<body>
+
+<div class="logo-bar">
+  <div class="logo-box">A</div>
+  <div>
+    <div class="logo-text">Agarwal Pharmaceuticals</div>
+    <div class="logo-sub">Field Staff Tracker</div>
+  </div>
+</div>
+
+<div class="card">
+  <!-- LOGIN SCREEN -->
+  <div id="screen-login" class="screen active">
+    <div class="screen-title">Good Morning! 👋</div>
+    <div class="screen-sub">Select your name to start your day.</div>
+    <select id="agent-select">
+      <option value="">— Select your name —</option>
+      <option value="vijay">Vijay</option>
+      <option value="sufiyan">Sufiyan</option>
+      <option value="sachin">Sachin</option>
+      <option value="vijay2">Vijay 2</option>
+      <option value="devender">Devender</option>
+      <option value="dheer">Dheer Singh</option>
+    </select>
+    <button class="btn btn-primary" onclick="startSession()">▶ Start My Day</button>
+    <div class="tip">Your location is only shared with Agarwal Pharmaceuticals office.</div>
+  </div>
+
+  <!-- TRACKING SCREEN -->
+  <div id="screen-tracking" class="screen">
+    <div class="agent-badge">
+      <div class="agent-av" id="trk-initials">—</div>
+      <div>
+        <div class="agent-nm" id="trk-name">—</div>
+        <div class="agent-dt">Started: <span id="trk-starttime">—</span> &nbsp;|&nbsp; <span id="trk-date">—</span></div>
+      </div>
+    </div>
+
+    <div id="resumed-banner" class="resumed-banner">
+      ✅ Session restored — KMs and logs carried forward from earlier today.
+    </div>
+
+    <div class="status-pill waiting" id="status-pill">
+      <div style="width:10px;height:10px;border-radius:50%;background:#ccc;flex-shrink:0;"></div>
+      <span id="status-text">Getting GPS signal...</span>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-box"><div class="stat-val" id="km-val">0.00</div><div class="stat-lbl">KM driven today</div></div>
+      <div class="stat-box"><div class="stat-val" id="spd-val">0</div><div class="stat-lbl">km/h right now</div></div>
+      <div class="stat-box"><div class="stat-val" id="stop-val">0</div><div class="stat-lbl">Stops made</div></div>
+      <div class="stat-box"><div class="stat-val" id="pause-count-val">0</div><div class="stat-lbl">Pauses today</div></div>
+    </div>
+
+    <div class="coord-box">
+      GPS: <span id="lat-val">—</span>, <span id="lng-val">—</span><br>
+      Accuracy: <span id="acc-val">—</span> m &nbsp;|&nbsp; Last sent: <span id="sent-val">—</span>
+    </div>
+
+    <!-- PAUSE SECTION -->
+    <div id="pause-section">
+      <select class="pause-reason" id="pause-reason">
+        <option value="">— Pause reason (optional) —</option>
+        <option value="Bike breakdown / repair">🔧 Bike breakdown / repair</option>
+        <option value="Lunch break">🍽️ Lunch break</option>
+        <option value="Stuck in traffic">🚦 Stuck in traffic</option>
+        <option value="Waiting at chemist / hospital">⏳ Waiting at chemist / hospital</option>
+        <option value="Personal stop">🏠 Personal stop</option>
+        <option value="Other">📝 Other</option>
+      </select>
+      <button class="btn btn-pause" id="btn-pause" onclick="pauseTracking()">⏸ Pause Tracking</button>
+    </div>
+    <div id="resume-section" style="display:none;">
+      <button class="btn btn-resume" onclick="resumeTracking()">▶ Resume Tracking</button>
+    </div>
+
+    <button class="btn btn-danger" style="margin-top:8px;" onclick="stopSession()">⏹ End Day & Sign Out</button>
+
+    <div class="log-section" style="margin-top:16px;">
+      <div class="log-title">Activity Log — Today</div>
+      <div id="activity-log"><div style="font-size:12px;color:#aaa;padding:4px 0;">No activity yet.</div></div>
+    </div>
+
+    <div class="tip">Keep this page open. If browser closes, reopen the link and select your name — your progress will be restored automatically.</div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCsTRLUOAer2Mpe0k5G3uKfiR_4wfDhOkU",
+  authDomain: "agarwal-pharma-tracker.firebaseapp.com",
+  projectId: "agarwal-pharma-tracker",
+  storageBucket: "agarwal-pharma-tracker.firebasestorage.app",
+  messagingSenderId: "1025894169515",
+  appId: "1:1025894169515:web:6f7d1f5d24b0faa611b0ee"
+};
+
+const NAMES = { vijay:'Vijay', sufiyan:'Sufiyan', sachin:'Sachin', vijay2:'Vijay 2', devender:'Devender', dheer:'Dheer Singh' };
+const MIN_SPEED_KMH = 5;        // below this = not moving
+const MIN_DISTANCE_M = 50;      // ignore movement under 50 metres (premises roaming)
+const SEND_INTERVAL_MS = 15000; // send GPS every 15 seconds
+const TODAY_KEY = () => new Date().toISOString().split('T')[0]; // e.g. 2026-06-17
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ── State ──
+let agentId = null;
+let watchId = null;
+let sendInterval = null;
+let isPaused = false;
+let totalKm = 0;
+let stopCount = 0;
+let pauseCount = 0;
+let inStop = false;
+let stopStart = null;
+let lastPos = null;   // { lat, lng }
+let lastLat = null, lastLng = null, lastSpd = 0;
+let activityLog = []; // array of { type, time, desc }
+let startTime = null;
+
+// ── Persistence helpers ──
+function saveState() {
+  if (!agentId) return;
+  const state = { agentId, totalKm, stopCount, pauseCount, inStop, isPaused, activityLog, startTime: startTime?.toISOString(), lastPos, date: TODAY_KEY() };
+  localStorage.setItem('pharma_tracker_' + agentId, JSON.stringify(state));
+}
+
+function loadState(id) {
+  try {
+    const raw = localStorage.getItem('pharma_tracker_' + id);
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    if (s.date !== TODAY_KEY()) { localStorage.removeItem('pharma_tracker_' + id); return null; } // different day
+    return s;
+  } catch(e) { return null; }
+}
+
+function clearState(id) { localStorage.removeItem('pharma_tracker_' + id); }
+
+// ── Session start ──
+window.startSession = function() {
+  agentId = document.getElementById('agent-select').value;
+  if (!agentId) { alert('Please select your name first.'); return; }
+
+  const saved = loadState(agentId);
+  const name = NAMES[agentId];
+  const initials = name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+
+  document.getElementById('trk-initials').textContent = initials;
+  document.getElementById('trk-name').textContent = name;
+  document.getElementById('trk-date').textContent = new Date().toLocaleDateString('en-IN', {day:'numeric',month:'short'});
+
+  if (saved) {
+    // Restore session
+    totalKm = saved.totalKm || 0;
+    stopCount = saved.stopCount || 0;
+    pauseCount = saved.pauseCount || 0;
+    inStop = false; // reset stop state on reopen
+    isPaused = saved.isPaused || false;
+    activityLog = saved.activityLog || [];
+    lastPos = saved.lastPos || null;
+    startTime = saved.startTime ? new Date(saved.startTime) : new Date();
+
+    document.getElementById('resumed-banner').style.display = 'block';
+    addLog('system', `Browser reopened — session restored (${totalKm.toFixed(2)} km so far)`);
+
+    if (isPaused) {
+      document.getElementById('pause-section').style.display = 'none';
+      document.getElementById('resume-section').style.display = 'block';
+      setPill('paused', 'Paused — tap Resume to continue');
+    }
+  } else {
+    totalKm = 0; stopCount = 0; pauseCount = 0;
+    inStop = false; isPaused = false; activityLog = []; lastPos = null;
+    startTime = new Date();
+    addLog('start', 'Day started');
+  }
+
+  document.getElementById('trk-starttime').textContent = startTime.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('screen-login').classList.remove('active');
+  document.getElementById('screen-tracking').classList.add('active');
+  updateStats();
+  beginTracking();
+};
+
+// ── GPS tracking ──
+function beginTracking() {
+  if (!navigator.geolocation) { setPill('error','GPS not supported on this device'); return; }
+  watchId = navigator.geolocation.watchPosition(onPosition, onError, { enableHighAccuracy: true, maximumAge: 8000, timeout: 20000 });
+  sendInterval = setInterval(() => { if (lastLat !== null) sendToFirebase(lastLat, lastLng, lastSpd); }, SEND_INTERVAL_MS);
+}
+
+function onPosition(pos) {
+  const { latitude: lat, longitude: lng, speed, accuracy } = pos.coords;
+  const spd = speed || 0;
+  const spdKmh = spd * 3.6;
+  lastLat = lat; lastLng = lng; lastSpd = spd;
+
+  document.getElementById('lat-val').textContent = lat.toFixed(5);
+  document.getElementById('lng-val').textContent = lng.toFixed(5);
+  document.getElementById('spd-val').textContent = spdKmh.toFixed(0);
+  document.getElementById('acc-val').textContent = Math.round(accuracy);
+
+  // ── KM logic: only count if NOT paused, speed > MIN, distance > MIN ──
+  if (!isPaused && lastPos) {
+    const distM = haversineMetres(lastPos.lat, lastPos.lng, lat, lng);
+    if (spdKmh >= MIN_SPEED_KMH && distM >= MIN_DISTANCE_M) {
+      totalKm += distM / 1000;
+    }
+  }
+
+  // Update last known position
+  if (!isPaused) lastPos = { lat, lng };
+
+  // ── Movement / stop detection ──
+  if (!isPaused) {
+    if (spdKmh < MIN_SPEED_KMH) {
+      if (!inStop) {
+        inStop = true;
+        stopStart = new Date();
+      }
+      setPill('stopped', `Stopped · ${spdKmh.toFixed(0)} km/h`);
+    } else {
+      if (inStop) {
+        const dur = Math.round((Date.now() - stopStart) / 60000);
+        if (dur >= 2) {
+          stopCount++;
+          addLog('stop', `Stopped for ${dur} min`);
+        }
+        inStop = false;
+      }
+      setPill('moving', `Moving · ${spdKmh.toFixed(0)} km/h · Sharing location`);
+    }
+  }
+
+  updateStats();
+  saveState();
+  sendToFirebase(lat, lng, spd);
+}
+
+function onError(err) {
+  const msgs = { 1:'Location permission denied — allow in Chrome settings', 2:'GPS signal weak — go outdoors', 3:'GPS timed out — retrying...' };
+  setPill('error', msgs[err.code] || 'GPS error');
+  addLog('system', 'GPS error: ' + (msgs[err.code] || 'unknown'));
+}
+
+// ── Pause / Resume ──
+window.pauseTracking = function() {
+  if (isPaused) return;
+  isPaused = true;
+  inStop = false;
+  pauseCount++;
+  const reason = document.getElementById('pause-reason').value || 'No reason given';
+  addLog('pause', `Paused — ${reason}`);
+  setPill('paused', `Paused · ${reason}`);
+  document.getElementById('pause-section').style.display = 'none';
+  document.getElementById('resume-section').style.display = 'block';
+  saveState();
+  // Still send location so admin sees they're stationary
+  if (lastLat !== null) sendToFirebase(lastLat, lastLng, 0);
+};
+
+window.resumeTracking = function() {
+  if (!isPaused) return;
+  isPaused = false;
+  lastPos = lastLat ? { lat: lastLat, lng: lastLng } : null; // reset anchor point
+  addLog('resume', 'Tracking resumed');
+  setPill('waiting', 'Resuming — getting GPS...');
+  document.getElementById('pause-section').style.display = 'block';
+  document.getElementById('resume-section').style.display = 'none';
+  document.getElementById('pause-reason').value = '';
+  saveState();
+};
+
+// ── End session ──
+window.stopSession = function() {
+  if (!confirm('End your day and sign out?')) return;
+  addLog('system', `Day ended — Total: ${totalKm.toFixed(2)} km, ${stopCount} stops, ${pauseCount} pauses`);
+  if (watchId) navigator.geolocation.clearWatch(watchId);
+  if (sendInterval) clearInterval(sendInterval);
+  clearState(agentId);
+  agentId = null; totalKm = 0; stopCount = 0; pauseCount = 0;
+  inStop = false; isPaused = false; activityLog = []; lastPos = null;
+  document.getElementById('screen-tracking').classList.remove('active');
+  document.getElementById('screen-login').classList.add('active');
+  document.getElementById('agent-select').value = '';
+  document.getElementById('resumed-banner').style.display = 'none';
+};
+
+// ── Firebase send ──
+async function sendToFirebase(lat, lng, spd) {
+  if (!agentId) return;
+  try {
+    await addDoc(collection(db, 'tracking', agentId, 'locations'), {
+      lat, lng, speed: spd,
+      kmTotal: totalKm,
+      stops: stopCount,
+      pauses: pauseCount,
+      isPaused,
+      timestamp: serverTimestamp(),
+      agent: agentId
+    });
+    document.getElementById('sent-val').textContent = new Date().toLocaleTimeString();
+  } catch(e) { console.error('Firebase error:', e); }
+}
+
+// ── UI helpers ──
+function setPill(type, msg) {
+  const pill = document.getElementById('status-pill');
+  pill.className = 'status-pill ' + type;
+  const dotColor = { moving:'#1D9E75', stopped:'#EF9F27', paused:'#3C3489', error:'#E24B4A', waiting:'#ccc' }[type] || '#ccc';
+  const animated = type === 'moving';
+  pill.innerHTML = `<div style="width:10px;height:10px;border-radius:50%;background:${dotColor};flex-shrink:0;${animated?'animation:blink 1.2s infinite':''}"></div><span>${msg}</span>`;
+}
+
+function updateStats() {
+  document.getElementById('km-val').textContent = totalKm.toFixed(2);
+  document.getElementById('stop-val').textContent = stopCount;
+  document.getElementById('pause-count-val').textContent = pauseCount;
+}
+
+function addLog(type, desc) {
+  const entry = { type, time: new Date().toISOString(), desc };
+  activityLog.unshift(entry); // newest first
+  if (activityLog.length > 50) activityLog.pop(); // keep last 50
+  renderLog();
+}
+
+function renderLog() {
+  const el = document.getElementById('activity-log');
+  if (!activityLog.length) { el.innerHTML = '<div style="font-size:12px;color:#aaa;padding:4px 0;">No activity yet.</div>'; return; }
+  el.innerHTML = activityLog.slice(0, 20).map(e => {
+    const t = new Date(e.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    return `<div class="log-item"><div class="log-dot ${e.type}"></div><div class="log-time">${t}</div><div class="log-desc">${e.desc}</div></div>`;
+  }).join('');
+}
+
+// ── Math ──
+function haversineMetres(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+</script>
+</body>
+</html>
