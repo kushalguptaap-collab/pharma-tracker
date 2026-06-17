@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agarwal Pharma – Admin Dashboard</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: #f4f3fc; color: #1a1a2e; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+/* ── Header ── */
+.header { background: #3C3489; color: #fff; padding: 10px 18px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; z-index: 100; }
+.header-left { display: flex; align-items: center; gap: 10px; }
+.logo { width: 30px; height: 30px; background: #AFA9EC; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; color: #3C3489; }
+.header-title { font-size: 15px; font-weight: 700; }
+.header-sub { font-size: 11px; opacity: 0.7; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.live-badge { background: #1D9E75; color: #fff; font-size: 11px; padding: 3px 10px; border-radius: 20px; display: flex; align-items: center; gap: 5px; }
+.live-dot { width: 7px; height: 7px; background: #fff; border-radius: 50%; animation: pulse 1.2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+.refresh-time { font-size: 11px; color: #AFA9EC; }
+
+/* ── Tab bar ── */
+.tabbar { background: #2d2870; display: flex; gap: 0; flex-shrink: 0; }
+.tab { padding: 9px 18px; font-size: 12px; font-weight: 600; color: #AFA9EC; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; }
+.tab:hover { color: #fff; }
+.tab.active { color: #fff; border-bottom-color: #AFA9EC; }
+
+/* ── Alert bar ── */
+.alert-bar { background: #FAEEDA; border-bottom: 1px solid #FAC775; padding: 7px 18px; font-size: 12px; color: #854F0B; display: none; align-items: center; gap: 8px; flex-shrink: 0; }
+.alert-bar.visible { display: flex; }
+.alert-item { background: #fff3e0; border: 1px solid #FAC775; border-radius: 6px; padding: 3px 10px; margin-right: 6px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.alert-item.speed { background: #FCEBEB; border-color: #F09595; color: #A32D2D; }
+.alert-dismiss { margin-left: auto; cursor: pointer; font-size: 14px; color: #888; }
+
+/* ── Main layout ── */
+.main { display: flex; flex: 1; overflow: hidden; }
+
+/* ── Sidebar ── */
+.sidebar { width: 280px; background: #fff; border-right: 1px solid #e8e6f5; display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+.metrics-row { display: grid; grid-template-columns: repeat(3,1fr); border-bottom: 1px solid #e8e6f5; flex-shrink: 0; }
+.metric-box { padding: 10px 6px; text-align: center; border-right: 1px solid #e8e6f5; }
+.metric-box:last-child { border-right: none; }
+.metric-num { font-size: 20px; font-weight: 700; }
+.metric-lbl { font-size: 9px; color: #888; margin-top: 1px; }
+.m-green{color:#1D9E75} .m-amber{color:#BA7517} .m-gray{color:#888} .m-red{color:#A32D2D}
+.sidebar-scroll { overflow-y: auto; flex: 1; }
+.sidebar-section { padding: 8px 12px; font-size: 10px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #f0eef8; background: #faf9fe; }
+.agent-card { padding: 10px 12px; border-bottom: 1px solid #f0eef8; cursor: pointer; transition: background 0.15s; }
+.agent-card:hover { background: #f4f3fc; }
+.agent-card.selected { background: #EEEDFE; border-left: 3px solid #3C3489; }
+.agent-card.alert-stop { border-left: 3px solid #EF9F27; }
+.agent-card.alert-speed { border-left: 3px solid #E24B4A; }
+.agent-top { display: flex; align-items: center; gap: 8px; }
+.agent-av { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; }
+.agent-name { font-size: 13px; font-weight: 600; color: #1a1a2e; }
+.agent-meta { font-size: 11px; color: #888; margin-top: 1px; }
+.sbadge { display: inline-block; padding: 1px 7px; border-radius: 20px; font-size: 9px; font-weight: 700; }
+.s-moving{background:#E1F5EE;color:#0F6E56} .s-stopped{background:#FAEEDA;color:#854F0B} .s-paused{background:#EEEDFE;color:#3C3489} .s-offline{background:#f0eef8;color:#888}
+.agent-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 3px; margin-top: 6px; }
+.a-stat { background: #f7f6fd; border-radius: 5px; padding: 4px 5px; text-align: center; }
+.a-stat-val { font-size: 12px; font-weight: 700; color: #3C3489; }
+.a-stat-lbl { font-size: 8px; color: #888; }
+.pause-reason-chip { background: #EEEDFE; color: #3C3489; font-size: 10px; padding: 2px 8px; border-radius: 20px; margin-top: 4px; display: inline-block; }
+
+/* ── Map panel ── */
+.map-panel { flex: 1; position: relative; overflow: hidden; }
+#map { width: 100%; height: 100%; }
+
+/* ── Map controls ── */
+.map-controls { position: absolute; top: 10px; left: 10px; display: flex; flex-direction: column; gap: 5px; z-index: 10; }
+.ctrl-btn { background: #fff; border: 1px solid #e8e6f5; border-radius: 7px; padding: 7px 11px; font-size: 11px; font-weight: 600; cursor: pointer; color: #3C3489; box-shadow: 0 1px 4px rgba(0,0,0,0.1); white-space: nowrap; transition: all 0.15s; }
+.ctrl-btn:hover { background: #EEEDFE; }
+.ctrl-btn.on { background: #3C3489; color: #fff; }
+
+/* ── Info panel ── */
+.info-panel { position: absolute; top: 10px; right: 10px; background: #fff; border-radius: 10px; box-shadow: 0 2px 16px rgba(60,52,137,0.15); padding: 14px 15px; width: 230px; z-index: 20; display: none; }
+.info-panel.visible { display: block; }
+.info-panel h3 { font-size: 13px; font-weight: 700; color: #3C3489; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+.info-row { display: flex; justify-content: space-between; font-size: 11px; padding: 3px 0; border-bottom: 1px solid #f0eef8; }
+.info-row:last-child { border: none; }
+.info-label { color: #888; }
+.info-val { font-weight: 600; color: #1a1a2e; }
+.info-btn { width: 100%; padding: 7px; border: none; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; margin-top: 5px; }
+.info-btn-primary { background: #3C3489; color: #fff; }
+.info-btn-secondary { background: #f4f3fc; color: #3C3489; margin-top: 4px; }
+
+/* ── Timeline drawer ── */
+.timeline-drawer { position: absolute; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e8e6f5; max-height: 220px; overflow-y: auto; z-index: 20; display: none; }
+.timeline-drawer.visible { display: block; }
+.drawer-header { padding: 8px 14px; font-size: 12px; font-weight: 700; color: #3C3489; background: #EEEDFE; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; }
+.tl-item { display: flex; gap: 10px; padding: 5px 14px; border-bottom: 1px solid #f7f6fd; font-size: 11px; align-items: flex-start; }
+.tl-dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 3px; flex-shrink: 0; }
+.tl-dot.move{background:#1D9E75} .tl-dot.stop{background:#EF9F27} .tl-dot.pause{background:#3C3489} .tl-dot.resume{background:#534AB7} .tl-dot.system{background:#888} .tl-dot.start{background:#1D9E75} .tl-dot.visit{background:#185FA5}
+.tl-time { color: #aaa; min-width: 46px; }
+.tl-desc { color: #1a1a2e; flex: 1; }
+
+/* ── Replay controls ── */
+.replay-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #1a1a2e; color: #fff; padding: 10px 16px; display: none; align-items: center; gap: 10px; z-index: 25; }
+.replay-bar.visible { display: flex; }
+.replay-btn { background: #3C3489; border: none; color: #fff; border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer; font-weight: 700; }
+.replay-slider { flex: 1; accent-color: #AFA9EC; }
+.replay-time { font-size: 11px; color: #AFA9EC; min-width: 80px; text-align: right; }
+.replay-speed { font-size: 11px; color: #AFA9EC; cursor: pointer; background: #2d2870; border: none; color: #AFA9EC; border-radius: 4px; padding: 4px 8px; }
+
+/* ── TABS content ── */
+.tab-content { display: none; }
+.tab-content.active { display: flex; flex: 1; overflow: hidden; }
+
+/* ── Summary tab ── */
+.summary-panel { flex: 1; overflow-y: auto; padding: 16px; }
+.summary-date-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.date-btn { background: #fff; border: 1px solid #e8e6f5; border-radius: 7px; padding: 6px 12px; font-size: 12px; cursor: pointer; color: #3C3489; font-weight: 600; }
+.date-btn:hover { background: #EEEDFE; }
+.date-input { border: 1px solid #e8e6f5; border-radius: 7px; padding: 6px 10px; font-size: 12px; color: #1a1a2e; }
+.export-btn { background: #3C3489; color: #fff; border: none; border-radius: 7px; padding: 6px 14px; font-size: 12px; cursor: pointer; font-weight: 700; margin-left: auto; }
+.export-btn:hover { background: #534AB7; }
+.summary-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 8px rgba(60,52,137,0.08); font-size: 12px; }
+.summary-table th { background: #3C3489; color: #fff; padding: 9px 12px; text-align: left; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.summary-table td { padding: 9px 12px; border-bottom: 1px solid #f0eef8; white-space: nowrap; }
+.summary-table tr:last-child td { border-bottom: none; }
+.summary-table tr:hover td { background: #f7f6fd; }
+.td-name { font-weight: 600; color: #3C3489; }
+.td-green { color: #0F6E56; font-weight: 700; }
+.td-amber { color: #854F0B; font-weight: 700; }
+.td-red { color: #A32D2D; font-weight: 700; }
+.status-chip { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+
+/* ── History tab ── */
+.history-panel { flex: 1; overflow-y: auto; padding: 16px; }
+.history-controls { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+.history-select { border: 1px solid #e8e6f5; border-radius: 7px; padding: 6px 10px; font-size: 12px; color: #1a1a2e; }
+.backup-btn { background: #1D9E75; color: #fff; border: none; border-radius: 7px; padding: 6px 14px; font-size: 12px; cursor: pointer; font-weight: 700; }
+.history-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+.history-card { background: #fff; border-radius: 10px; padding: 12px 14px; box-shadow: 0 1px 8px rgba(60,52,137,0.08); }
+.history-card-date { font-size: 12px; font-weight: 700; color: #3C3489; margin-bottom: 8px; display: flex; justify-content: space-between; }
+.history-mini-table { width: 100%; font-size: 11px; }
+.history-mini-table td { padding: 3px 0; }
+.history-mini-table td:last-child { text-align: right; font-weight: 600; color: #3C3489; }
+
+/* ── Heatmap ── */
+.heatmap-panel { flex: 1; position: relative; }
+#heatmap { width: 100%; height: 100%; }
+
+/* ── Geofence ── */
+.geofence-panel { flex: 1; display: flex; flex-direction: column; }
+.geofence-toolbar { padding: 10px 14px; background: #fff; border-bottom: 1px solid #e8e6f5; display: flex; gap: 8px; align-items: center; flex-shrink: 0; font-size: 12px; }
+.geofence-map { flex: 1; position: relative; }
+#gfmap { width: 100%; height: 100%; }
+.geofence-list { width: 240px; background: #fff; border-left: 1px solid #e8e6f5; overflow-y: auto; padding: 12px; }
+.gf-item { background: #f7f6fd; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; font-size: 12px; }
+.gf-name { font-weight: 700; color: #3C3489; }
+.gf-radius { color: #888; font-size: 11px; }
+.gf-delete { float: right; color: #E24B4A; cursor: pointer; font-size: 14px; }
+.gf-input { width: 100%; padding: 6px 10px; border: 1px solid #e8e6f5; border-radius: 6px; font-size: 12px; margin-bottom: 6px; }
+
+/* ── Attendance tab ── */
+.attendance-panel { flex: 1; overflow-y: auto; padding: 16px; }
+.att-controls { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+.att-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 8px rgba(60,52,137,0.08); font-size: 12px; }
+.att-table th { background: #3C3489; color: #fff; padding: 9px 12px; text-align: left; font-size: 11px; }
+.att-table td { padding: 9px 12px; border-bottom: 1px solid #f0eef8; }
+.att-present { color: #0F6E56; font-weight: 700; }
+.att-absent { color: #A32D2D; font-weight: 700; }
+.att-half { color: #854F0B; font-weight: 700; }
+
+/* ── Toast ── */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #3C3489; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 13px; z-index: 9999; display: none; box-shadow: 0 4px 16px rgba(60,52,137,0.3); }
+
+/* ── Modal ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 999; display: none; align-items: center; justify-content: center; }
+.modal-overlay.visible { display: flex; }
+.modal { background: #fff; border-radius: 14px; padding: 22px 24px; width: 380px; max-width: 95vw; }
+.modal h3 { font-size: 16px; font-weight: 700; color: #3C3489; margin-bottom: 6px; }
+.modal p { font-size: 13px; color: #888; margin-bottom: 16px; }
+.modal-btns { display: flex; gap: 8px; }
+.modal-btn { flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.modal-btn-primary { background: #3C3489; color: #fff; }
+.modal-btn-secondary { background: #f4f3fc; color: #3C3489; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">A</div>
+    <div>
+      <div class="header-title">Agarwal Pharmaceuticals — Field Tracker</div>
+      <div class="header-sub">Admin Dashboard · <span id="today-label"></span></div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="refresh-time" id="refresh-time">Connecting...</span>
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+  </div>
+</div>
+
+<!-- Tab bar -->
+<div class="tabbar">
+  <div class="tab active" onclick="switchTab('live')">🗺️ Live Map</div>
+  <div class="tab" onclick="switchTab('summary')">📊 Today's Summary</div>
+  <div class="tab" onclick="switchTab('history')">📅 History</div>
+  <div class="tab" onclick="switchTab('heatmap')">🔥 Coverage Map</div>
+  <div class="tab" onclick="switchTab('geofence')">📍 Geofences</div>
+  <div class="tab" onclick="switchTab('attendance')">✅ Attendance</div>
+</div>
+
+<!-- Alert bar -->
+<div class="alert-bar" id="alert-bar">
+  <span style="font-weight:700;margin-right:6px;">⚠️ Alerts:</span>
+  <div id="alert-items"></div>
+  <span class="alert-dismiss" onclick="dismissAlerts()">✕ Dismiss</span>
+</div>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- LIVE MAP TAB -->
+  <div class="tab-content active" id="tab-live">
+    <div class="sidebar">
+      <div class="metrics-row">
+        <div class="metric-box"><div class="metric-num m-green" id="cnt-moving">0</div><div class="metric-lbl">Moving</div></div>
+        <div class="metric-box"><div class="metric-num m-amber" id="cnt-stopped">0</div><div class="metric-lbl">Stopped</div></div>
+        <div class="metric-box"><div class="metric-num m-gray" id="cnt-offline">0</div><div class="metric-lbl">Offline</div></div>
+      </div>
+      <div class="sidebar-section">Field Staff — Live</div>
+      <div class="sidebar-scroll" id="agent-list"></div>
+    </div>
+    <div class="map-panel">
+      <div id="map"></div>
+      <div class="map-controls">
+        <button class="ctrl-btn" id="btn-trails" onclick="toggleTrails()">🛣️ Trails: OFF</button>
+        <button class="ctrl-btn" id="btn-stops" onclick="toggleStops()">🟡 Stops: OFF</button>
+        <button class="ctrl-btn" id="btn-visits" onclick="toggleVisits()">📍 Visits: OFF</button>
+        <button class="ctrl-btn" id="btn-gf-show" onclick="toggleGfShow()">⭕ Geofences: OFF</button>
+        <button class="ctrl-btn" onclick="fitAll()">🔍 Fit All</button>
+      </div>
+      <div class="info-panel" id="info-panel">
+        <h3><span id="info-name">—</span><span style="cursor:pointer;color:#888;font-weight:400;font-size:14px;" onclick="closeInfo()">✕</span></h3>
+        <div class="info-row"><span class="info-label">Status</span><span class="info-val" id="info-status">—</span></div>
+        <div class="info-row"><span class="info-label">Speed</span><span class="info-val" id="info-speed">—</span></div>
+        <div class="info-row"><span class="info-label">KMs today</span><span class="info-val" id="info-km">—</span></div>
+        <div class="info-row"><span class="info-label">Stops</span><span class="info-val" id="info-stops">—</span></div>
+        <div class="info-row"><span class="info-label">Pauses</span><span class="info-val" id="info-pauses">—</span></div>
+        <div class="info-row"><span class="info-label">Pause reason</span><span class="info-val" id="info-pause-reason" style="color:#3C3489;">—</span></div>
+        <div class="info-row"><span class="info-label">Check-in</span><span class="info-val" id="info-checkin">—</span></div>
+        <div class="info-row"><span class="info-label">Last update</span><span class="info-val" id="info-lastupdate">—</span></div>
+        <button class="info-btn info-btn-primary" onclick="startReplay()">▶ Replay Day</button>
+        <button class="info-btn info-btn-secondary" onclick="showTimeline()">📋 Full Timeline</button>
+        <button class="info-btn info-btn-secondary" onclick="exportAgentCSV()">📥 Export This Agent</button>
+      </div>
+      <div class="timeline-drawer" id="timeline-drawer">
+        <div class="drawer-header">
+          <span id="tl-title">Timeline</span>
+          <span style="cursor:pointer;color:#888;" onclick="document.getElementById('timeline-drawer').classList.remove('visible')">✕</span>
+        </div>
+        <div id="tl-body"></div>
+      </div>
+      <div class="replay-bar" id="replay-bar">
+        <button class="replay-btn" id="replay-play-btn" onclick="toggleReplayPlay()">▶</button>
+        <input type="range" class="replay-slider" id="replay-slider" min="0" max="100" value="0" oninput="scrubReplay(this.value)">
+        <select class="replay-speed" id="replay-speed" onchange="changeReplaySpeed(this.value)">
+          <option value="1">1×</option>
+          <option value="3">3×</option>
+          <option value="6" selected>6×</option>
+          <option value="12">12×</option>
+        </select>
+        <span class="replay-time" id="replay-time-label">—</span>
+        <button class="replay-btn" onclick="stopReplay()" style="background:#555;">✕ Exit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY TAB -->
+  <div class="tab-content" id="tab-summary">
+    <div class="summary-panel">
+      <div class="summary-date-bar">
+        <button class="date-btn" onclick="changeSummaryDate(-1)">◀ Prev</button>
+        <input type="date" class="date-input" id="summary-date" onchange="loadSummary()">
+        <button class="date-btn" onclick="changeSummaryDate(1)">Next ▶</button>
+        <button class="export-btn" onclick="exportSummaryCSV()">📥 Export Excel/CSV</button>
+      </div>
+      <table class="summary-table" id="summary-table">
+        <thead>
+          <tr>
+            <th>Name</th><th>Check-In</th><th>Check-Out</th><th>KMs Driven</th>
+            <th>Stops</th><th>Avg Stop</th><th>Pauses</th><th>Pause Reason</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="summary-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- HISTORY TAB -->
+  <div class="tab-content" id="tab-history">
+    <div class="history-panel">
+      <div class="history-controls">
+        <select class="history-select" id="history-agent" onchange="loadHistory()">
+          <option value="all">All Staff</option>
+          <option value="vijay">Vijay</option>
+          <option value="sufiyan">Sufiyan</option>
+          <option value="sachin">Sachin</option>
+          <option value="vijay2">Vijay 2</option>
+          <option value="devender">Devender</option>
+          <option value="dheer">Dheer Singh</option>
+        </select>
+        <select class="history-select" id="history-range" onchange="loadHistory()">
+          <option value="7">Last 7 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 3 months</option>
+          <option value="180">Last 6 months</option>
+        </select>
+        <button class="backup-btn" onclick="downloadBackup()">💾 Download Full Backup</button>
+        <button class="export-btn" onclick="exportHistoryCSV()">📥 Export CSV</button>
+      </div>
+      <div class="history-grid" id="history-grid"></div>
+    </div>
+  </div>
+
+  <!-- HEATMAP TAB -->
+  <div class="tab-content" id="tab-heatmap">
+    <div class="heatmap-panel">
+      <div id="heatmap"></div>
+    </div>
+  </div>
+
+  <!-- GEOFENCE TAB -->
+  <div class="tab-content" id="tab-geofence">
+    <div class="geofence-panel">
+      <div class="geofence-toolbar">
+        <strong style="color:#3C3489;">Geofences</strong>
+        <span style="color:#888;font-size:11px;">Click on the map to place a geofence. Alerts fire when staff enter/exit.</span>
+        <select class="history-select" id="gf-radius-select">
+          <option value="100">Radius: 100m</option>
+          <option value="200" selected>Radius: 200m</option>
+          <option value="500">Radius: 500m</option>
+          <option value="1000">Radius: 1km</option>
+        </select>
+        <button class="export-btn" onclick="saveGeofences()">💾 Save Geofences</button>
+      </div>
+      <div style="display:flex;flex:1;overflow:hidden;">
+        <div class="geofence-map"><div id="gfmap"></div></div>
+        <div class="geofence-list">
+          <div style="font-size:12px;font-weight:700;color:#3C3489;margin-bottom:10px;">Saved Geofences</div>
+          <div id="gf-list"><div style="font-size:12px;color:#aaa;">No geofences yet. Click on the map to add.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ATTENDANCE TAB -->
+  <div class="tab-content" id="tab-attendance">
+    <div class="attendance-panel">
+      <div class="att-controls">
+        <input type="date" class="date-input" id="att-date" onchange="loadAttendance()">
+        <select class="history-select" id="att-range">
+          <option value="day">Single Day</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+        </select>
+        <button class="backup-btn" onclick="exportAttendance()">📥 Export Attendance</button>
+        <button class="export-btn" onclick="downloadAttendanceBackup()">💾 Backup Attendance</button>
+      </div>
+      <table class="att-table" id="att-table">
+        <thead>
+          <tr><th>Name</th><th>Date</th><th>Check-In</th><th>Check-Out</th><th>Hours in Field</th><th>KMs</th><th>Status</th></tr>
+        </thead>
+        <tbody id="att-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h3 id="modal-title">—</h3>
+    <p id="modal-body">—</p>
+    <div class="modal-btns">
+      <button class="modal-btn modal-btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn modal-btn-primary" id="modal-confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, onSnapshot, query, orderBy, limit, getDocs, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCsTRLUOAer2Mpe0k5G3uKfiR_4wfDhOkU",
+  authDomain: "agarwal-pharma-tracker.firebaseapp.com",
+  projectId: "agarwal-pharma-tracker",
+  storageBucket: "agarwal-pharma-tracker.firebasestorage.app",
+  messagingSenderId: "1025894169515",
+  appId: "1:1025894169515:web:6f7d1f5d24b0faa611b0ee"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ── Constants ──
+const SPEED_ALERT_KMH = 60;
+const STOP_ALERT_MIN = 10;
+const VISIT_MIN_MIN = 5;
+const VISIT_SPEED_KMH = 3;
+
+const AGENTS = [
+  { id:'vijay',    name:'Vijay',       color:'#3C3489', bg:'#EEEDFE' },
+  { id:'sufiyan',  name:'Sufiyan',     color:'#0F6E56', bg:'#E1F5EE' },
+  { id:'sachin',   name:'Sachin',      color:'#854F0B', bg:'#FAEEDA' },
+  { id:'vijay2',   name:'Vijay 2',     color:'#993556', bg:'#FBEAF0' },
+  { id:'devender', name:'Devender',    color:'#185FA5', bg:'#E6F1FB' },
+  { id:'dheer',    name:'Dheer Singh', color:'#3B6D11', bg:'#EAF3DE' },
+];
+
+// ── State ──
+let map, heatmapObj, gfMap;
+let markers={}, trails={}, stopMkrs={}, visitMkrs={}, gfCircles=[];
+let agentData={}, selectedAgent=null;
+let showTrails=false, showStops=false, showVisits=false, showGf=false;
+let activeAlerts={};
+let replayState=null, replayTimer=null;
+let geofences = JSON.parse(localStorage.getItem('pharma_geofences')||'[]');
+
+document.getElementById('today-label').textContent = new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'});
+document.getElementById('summary-date').value = new Date().toISOString().split('T')[0];
+document.getElementById('att-date').value = new Date().toISOString().split('T')[0];
+
+AGENTS.forEach(a => {
+  agentData[a.id] = { ...a, lat:null, lng:null, speed:0, km:0, stops:0, pauses:0, statusText:'Offline', lastSeen:null, checkIn:null, pauseReason:'', timeline:[], allDocs:[], visits:[], stopSince:null };
+});
+
+// ── Init map ──
+window.initMap = function() {
+  map = new google.maps.Map(document.getElementById('map'), {
+    center:{lat:28.6139,lng:77.2090}, zoom:11,
+    mapTypeControl:false, streetViewControl:false,
+    styles:[{featureType:'poi',stylers:[{visibility:'off'}]}]
+  });
+  heatmapObj = null;
+  initGfMap();
+  startListening();
+  setInterval(checkAlerts, 30000);
+};
+
+function initGfMap() {
+  gfMap = new google.maps.Map(document.getElementById('gfmap'), {
+    center:{lat:28.6139,lng:77.2090}, zoom:12,
+    mapTypeControl:false, streetViewControl:false
+  });
+  gfMap.addListener('click', e => addGeofence(e.latLng));
+  renderGeofenceList();
+  geofences.forEach(gf => drawGfCircle(gf));
+}
+
+// ── Firebase listener ──
+function startListening() {
+  AGENTS.forEach(agent => {
+    const q = query(collection(db,'tracking',agent.id,'locations'), orderBy('timestamp','desc'), limit(500));
+    onSnapshot(q, snap => {
+      const docs = snap.docs.map(d=>d.data()).filter(d=>d.lat&&d.lng).reverse();
+      if (!docs.length) { updateSidebar(); return; }
+      const latest = docs[docs.length-1];
+      const now = Date.now();
+      const lastMs = getMs(latest.timestamp);
+      const isOnline = (now - lastMs) < 3*60*1000;
+      const ad = agentData[agent.id];
+      ad.lat=latest.lat; ad.lng=latest.lng;
+      ad.speed=latest.speed||0;
+      ad.lastSeen=new Date(lastMs);
+      ad.km=latest.kmTotal||calcKm(docs);
+      ad.stops=latest.stops||0;
+      ad.pauses=latest.pauses||0;
+      ad.isPaused=latest.isPaused||false;
+      ad.allDocs=docs;
+      if (!ad.checkIn && docs.length) ad.checkIn = new Date(getMs(docs[0].timestamp));
+
+      // Pause reason from latest
+      ad.pauseReason = ad.isPaused ? (latest.pauseReason||'Paused') : '';
+
+      // Timeline from logs (if stored) else basic
+      ad.timeline = buildTimeline(docs);
+
+      // Visit detection
+      ad.visits = detectVisits(docs);
+
+      // Stop since
+      const spdKmh = ad.speed*3.6;
+      if (spdKmh < 3 && isOnline) {
+        if (!ad.stopSince) ad.stopSince = new Date(lastMs);
+      } else {
+        ad.stopSince = null;
+      }
+
+      ad.statusText = !isOnline?'Offline': ad.isPaused?'Paused': spdKmh<3?'Stopped':'Moving';
+
+      updateMarker(agent, docs, isOnline);
+      updateSidebar();
+      if (selectedAgent===agent.id) updateInfoPanel();
+      checkAgentAlerts(agent, ad, isOnline);
+      updateHeatmap();
+      document.getElementById('refresh-time').textContent = 'Updated '+new Date().toLocaleTimeString();
+    });
+  });
+}
+
+function getMs(ts) { return ts?.toMillis ? ts.toMillis() : (ts||0)*1000; }
+
+function calcKm(docs) {
+  let km=0;
+  for (let i=1;i<docs.length;i++) {
+    const d=haversineM(docs[i-1].lat,docs[i-1].lng,docs[i].lat,docs[i].lng);
+    if ((docs[i].speed||0)*3.6>=5 && d>=50) km+=d/1000;
+  }
+  return km;
+}
+
+function buildTimeline(docs) {
+  const tl=[];
+  let inStop=false, stopStart=null;
+  for (let i=0;i<docs.length;i++) {
+    const spd=(docs[i].speed||0)*3.6;
+    const t=new Date(getMs(docs[i].timestamp));
+    if (spd<3) { if(!inStop){inStop=true;stopStart=t;} }
+    else {
+      if (inStop) { const dur=Math.round((t-stopStart)/60000); if(dur>=2) tl.push({type:'stop',time:stopStart,desc:`Stopped for ${dur} min`}); inStop=false; }
+      tl.push({type:'move',time:t,desc:`Moving at ${spd.toFixed(0)} km/h`});
+    }
+  }
+  return tl;
+}
+
+function detectVisits(docs) {
+  const visits=[]; let vStart=null, vLat=null, vLng=null;
+  for (let i=0;i<docs.length;i++) {
+    const spd=(docs[i].speed||0)*3.6;
+    const t=new Date(getMs(docs[i].timestamp));
+    if (spd<VISIT_SPEED_KMH) {
+      if (!vStart){vStart=t;vLat=docs[i].lat;vLng=docs[i].lng;}
+    } else {
+      if (vStart) {
+        const dur=Math.round((t-vStart)/60000);
+        if (dur>=VISIT_MIN_MIN) visits.push({lat:vLat,lng:vLng,time:vStart,dur});
+        vStart=null;
+      }
+    }
+  }
+  return visits;
+}
+
+// ── Markers ──
+function makeIcon(initials,color) {
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="48" viewBox="0 0 40 48"><ellipse cx="20" cy="45" rx="9" ry="3" fill="rgba(0,0,0,0.2)"/><circle cx="20" cy="20" r="18" fill="${color}" stroke="white" stroke-width="2.5"/><text x="20" y="25" font-size="12" font-weight="700" fill="white" text-anchor="middle" font-family="Segoe UI,sans-serif">${initials}</text></svg>`;
+  return {url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg),scaledSize:new google.maps.Size(40,48),anchor:new google.maps.Point(20,48)};
+}
+
+function updateMarker(agent, docs, isOnline) {
+  if (!map||!agentData[agent.id].lat) return;
+  const ad=agentData[agent.id];
+  const pos={lat:ad.lat,lng:ad.lng};
+  const spdKmh=ad.speed*3.6;
+  const color=!isOnline?'#888':ad.isPaused?'#3C3489':spdKmh<3?'#EF9F27':'#1D9E75';
+  const initials=ad.name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+  if (markers[agent.id]) { markers[agent.id].setPosition(pos); markers[agent.id].setIcon(makeIcon(initials,color)); }
+  else {
+    markers[agent.id]=new google.maps.Marker({position:pos,map,title:ad.name,icon:makeIcon(initials,color)});
+    markers[agent.id].addListener('click',()=>selectAgent(agent.id));
+  }
+  // Trail
+  if (trails[agent.id]) trails[agent.id].setMap(null);
+  if (showTrails && docs.length>1) {
+    trails[agent.id]=new google.maps.Polyline({path:docs.map(d=>({lat:d.lat,lng:d.lng})),geodesic:true,strokeColor:agent.color,strokeOpacity:0.7,strokeWeight:3,map});
+  }
+  // Stop markers
+  if (stopMkrs[agent.id]) stopMkrs[agent.id].forEach(m=>m.setMap(null));
+  stopMkrs[agent.id]=[];
+  if (showStops) {
+    docs.forEach(d=>{ if((d.speed||0)*3.6<3) stopMkrs[agent.id].push(new google.maps.Marker({position:{lat:d.lat,lng:d.lng},map,icon:{path:google.maps.SymbolPath.CIRCLE,scale:5,fillColor:'#EF9F27',fillOpacity:1,strokeColor:'#854F0B',strokeWeight:1.5}})); });
+  }
+  // Visit markers
+  if (visitMkrs[agent.id]) visitMkrs[agent.id].forEach(m=>m.setMap(null));
+  visitMkrs[agent.id]=[];
+  if (showVisits) {
+    ad.visits.forEach(v=>{
+      const m=new google.maps.Marker({position:{lat:v.lat,lng:v.lng},map,icon:{path:google.maps.SymbolPath.CIRCLE,scale:7,fillColor:'#185FA5',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}});
+      const iw=new google.maps.InfoWindow({content:`<div style="font-size:12px;"><b>Visit</b><br>${v.time.toLocaleTimeString()}<br>${v.dur} min</div>`});
+      m.addListener('click',()=>iw.open(map,m));
+      visitMkrs[agent.id].push(m);
+    });
+  }
+}
+
+// ── Sidebar ──
+function updateSidebar() {
+  let moving=0,stopped=0,offline=0;
+  const list=document.getElementById('agent-list');
+  list.innerHTML='';
+  AGENTS.forEach(agent=>{
+    const ad=agentData[agent.id];
+    if(ad.statusText==='Moving') moving++;
+    else if(ad.statusText==='Stopped'||ad.statusText==='Paused') stopped++;
+    else offline++;
+    const initials=ad.name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    const badgeClass=ad.statusText==='Moving'?'s-moving':ad.statusText==='Stopped'?'s-stopped':ad.statusText==='Paused'?'s-paused':'s-offline';
+    const spdKmh=(ad.speed*3.6).toFixed(0);
+    const timeStr=ad.lastSeen?ad.lastSeen.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'—';
+    const alertClass = activeAlerts[agent.id+'_speed']?'alert-speed': activeAlerts[agent.id+'_stop']?'alert-stop':'';
+    const card=document.createElement('div');
+    card.className=`agent-card ${alertClass}${selectedAgent===agent.id?' selected':''}`;
+    card.innerHTML=`
+      <div class="agent-top">
+        <div class="agent-av" style="background:${agent.bg};color:${agent.color}">${initials}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="agent-name">${ad.name}</div>
+          <div class="agent-meta"><span class="sbadge ${badgeClass}">${ad.statusText}</span> <span style="margin-left:4px;">${ad.statusText!=='Offline'?spdKmh+' km/h':'Last: '+timeStr}</span></div>
+          ${ad.isPaused && ad.pauseReason?`<div class="pause-reason-chip">⏸ ${ad.pauseReason}</div>`:''}
+        </div>
+      </div>
+      <div class="agent-stats">
+        <div class="a-stat"><div class="a-stat-val">${ad.km.toFixed(1)}</div><div class="a-stat-lbl">KM</div></div>
+        <div class="a-stat"><div class="a-stat-val">${ad.stops}</div><div class="a-stat-lbl">Stops</div></div>
+        <div class="a-stat"><div class="a-stat-val">${ad.visits?ad.visits.length:0}</div><div class="a-stat-lbl">Visits</div></div>
+      </div>`;
+    card.onclick=()=>selectAgent(agent.id);
+    list.appendChild(card);
+  });
+  document.getElementById('cnt-moving').textContent=moving;
+  document.getElementById('cnt-stopped').textContent=stopped;
+  document.getElementById('cnt-offline').textContent=offline;
+}
+
+// ── Alerts ──
+function checkAgentAlerts(agent, ad, isOnline) {
+  if (!isOnline) return;
+  const spdKmh=ad.speed*3.6;
+  // Speed alert
+  if (spdKmh>SPEED_ALERT_KMH) { activeAlerts[agent.id+'_speed']={name:ad.name,msg:`🏍️ ${ad.name} at ${spdKmh.toFixed(0)} km/h!`,type:'speed'}; }
+  else { delete activeAlerts[agent.id+'_speed']; }
+  // Stop alert
+  if (ad.stopSince && !ad.isPaused) {
+    const minStopped=Math.round((Date.now()-ad.stopSince)/60000);
+    if (minStopped>=STOP_ALERT_MIN) { activeAlerts[agent.id+'_stop']={name:ad.name,msg:`⏱️ ${ad.name} stopped ${minStopped} min`,type:'stop'}; }
+    else { delete activeAlerts[agent.id+'_stop']; }
+  } else { delete activeAlerts[agent.id+'_stop']; }
+  renderAlerts();
+}
+
+function checkAlerts() { AGENTS.forEach(a=>{ if(agentData[a.id].stopSince) checkAgentAlerts(a,agentData[a.id],true); }); }
+
+function renderAlerts() {
+  const keys=Object.keys(activeAlerts);
+  const bar=document.getElementById('alert-bar');
+  if (!keys.length){bar.classList.remove('visible');return;}
+  bar.classList.add('visible');
+  document.getElementById('alert-items').innerHTML=keys.map(k=>`<span class="alert-item ${activeAlerts[k].type}" onclick="selectAgent('${k.split('_')[0]}')">${activeAlerts[k].msg}</span>`).join('');
+}
+
+window.dismissAlerts=()=>{activeAlerts={};renderAlerts();};
+
+// ── Geofence check ──
+function checkGeofence(agent, lat, lng) {
+  geofences.forEach(gf=>{
+    const dist=haversineM(lat,lng,gf.lat,gf.lng);
+    const key=agent.id+'_gf_'+gf.id;
+    const wasInside=activeAlerts[key+'_inside'];
+    const isInside=dist<=gf.radius;
+    if (isInside&&!wasInside) { activeAlerts[key+'_inside']=true; showToast(`📍 ${agent.name} entered: ${gf.name}`); renderAlerts(); }
+    else if (!isInside&&wasInside) { delete activeAlerts[key+'_inside']; showToast(`📍 ${agent.name} left: ${gf.name}`); renderAlerts(); }
+  });
+}
+
+// ── Select agent ──
+window.selectAgent=function(id){
+  selectedAgent=id;
+  const ad=agentData[id];
+  if(ad.lat&&map){map.panTo({lat:ad.lat,lng:ad.lng});map.setZoom(15);}
+  document.getElementById('info-panel').classList.add('visible');
+  updateInfoPanel();updateSidebar();
+};
+
+function updateInfoPanel() {
+  if(!selectedAgent)return;
+  const ad=agentData[selectedAgent];
+  document.getElementById('info-name').textContent=ad.name;
+  document.getElementById('info-status').textContent=ad.statusText;
+  document.getElementById('info-speed').textContent=(ad.speed*3.6).toFixed(1)+' km/h';
+  document.getElementById('info-km').textContent=ad.km.toFixed(2)+' km';
+  document.getElementById('info-stops').textContent=ad.stops;
+  document.getElementById('info-pauses').textContent=ad.pauses;
+  document.getElementById('info-pause-reason').textContent=ad.pauseReason||'—';
+  document.getElementById('info-checkin').textContent=ad.checkIn?ad.checkIn.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'Not started';
+  document.getElementById('info-lastupdate').textContent=ad.lastSeen?ad.lastSeen.toLocaleTimeString():'—';
+}
+
+window.closeInfo=function(){document.getElementById('info-panel').classList.remove('visible');selectedAgent=null;updateSidebar();};
+
+// ── Timeline ──
+window.showTimeline=function(){
+  if(!selectedAgent)return;
+  const ad=agentData[selectedAgent];
+  document.getElementById('tl-title').textContent=ad.name+' — Today';
+  const body=document.getElementById('tl-body');
+  const items=[...(ad.timeline||[]),...(ad.visits||[]).map(v=>({type:'visit',time:v.time,desc:`Visit: ${v.dur} min`}))].sort((a,b)=>a.time-b.time);
+  body.innerHTML=!items.length?'<div style="padding:12px;color:#aaa;font-size:12px;">No data yet.</div>':items.map(e=>`<div class="tl-item"><div class="tl-dot ${e.type}"></div><span class="tl-time">${e.time.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span><span class="tl-desc">${e.desc}</span></div>`).join('');
+  document.getElementById('timeline-drawer').classList.add('visible');
+};
+
+// ── Replay ──
+window.startReplay=function(){
+  if(!selectedAgent)return;
+  const ad=agentData[selectedAgent];
+  if(!ad.allDocs.length){showToast('No data to replay.');return;}
+  stopReplayCleanup();
+  replayState={docs:ad.allDocs,idx:0,playing:false,speed:6,marker:null};
+  const d=replayState.docs[0];
+  replayState.marker=new google.maps.Marker({position:{lat:d.lat,lng:d.lng},map,icon:makeIcon(ad.name.substring(0,2).toUpperCase(),'#E24B4A'),zIndex:999});
+  document.getElementById('replay-bar').classList.add('visible');
+  document.getElementById('replay-slider').max=replayState.docs.length-1;
+  document.getElementById('replay-slider').value=0;
+  updateReplayLabel(0);
+  toggleReplayPlay();
+};
+
+window.toggleReplayPlay=function(){
+  if(!replayState)return;
+  replayState.playing=!replayState.playing;
+  document.getElementById('replay-play-btn').textContent=replayState.playing?'⏸':'▶';
+  if(replayState.playing) advanceReplay();
+};
+
+function advanceReplay(){
+  if(!replayState||!replayState.playing)return;
+  if(replayState.idx>=replayState.docs.length-1){replayState.playing=false;document.getElementById('replay-play-btn').textContent='▶';return;}
+  replayState.idx++;
+  const d=replayState.docs[replayState.idx];
+  replayState.marker.setPosition({lat:d.lat,lng:d.lng});
+  map.panTo({lat:d.lat,lng:d.lng});
+  document.getElementById('replay-slider').value=replayState.idx;
+  updateReplayLabel(replayState.idx);
+  replayTimer=setTimeout(advanceReplay, Math.max(50, 1000/replayState.speed));
+}
+
+window.scrubReplay=function(val){
+  if(!replayState)return;
+  replayState.idx=parseInt(val);
+  const d=replayState.docs[replayState.idx];
+  replayState.marker.setPosition({lat:d.lat,lng:d.lng});
+  updateReplayLabel(replayState.idx);
+};
+
+window.changeReplaySpeed=function(v){if(replayState)replayState.speed=parseInt(v);};
+
+function updateReplayLabel(idx){
+  if(!replayState)return;
+  const d=replayState.docs[idx];
+  const t=new Date(getMs(d.timestamp));
+  document.getElementById('replay-time-label').textContent=t.toLocaleTimeString([])+' · '+(d.speed||0*3.6).toFixed(0)+' km/h';
+}
+
+window.stopReplay=function(){stopReplayCleanup();document.getElementById('replay-bar').classList.remove('visible');};
+function stopReplayCleanup(){if(replayTimer)clearTimeout(replayTimer);if(replayState?.marker)replayState.marker.setMap(null);replayState=null;}
+
+// ── Heatmap ──
+function updateHeatmap(){
+  if(!map)return;
+  const pts=[];
+  AGENTS.forEach(a=>{ agentData[a.id].allDocs.forEach(d=>{ if(d.lat&&d.lng) pts.push(new google.maps.LatLng(d.lat,d.lng)); }); });
+  if(document.getElementById('tab-heatmap').classList.contains('active')){
+    const hm=document.getElementById('heatmap');
+    if(!hm._map){
+      hm._map=new google.maps.Map(hm,{center:{lat:28.6139,lng:77.2090},zoom:11,mapTypeControl:false,streetViewControl:false});
+    }
+    if(hm._heatmap) hm._heatmap.setMap(null);
+    hm._heatmap=new google.maps.visualization.HeatmapLayer({data:pts,map:hm._map,radius:20});
+  }
+}
+
+// ── Toggle controls ──
+window.toggleTrails=function(){showTrails=!showTrails;document.getElementById('btn-trails').textContent=`🛣️ Trails: ${showTrails?'ON':'OFF'}`;document.getElementById('btn-trails').classList.toggle('on',showTrails);AGENTS.forEach(a=>{if(agentData[a.id].allDocs.length)updateMarker(a,agentData[a.id].allDocs,agentData[a.id].statusText!=='Offline');});};
+window.toggleStops=function(){showStops=!showStops;document.getElementById('btn-stops').textContent=`🟡 Stops: ${showStops?'ON':'OFF'}`;document.getElementById('btn-stops').classList.toggle('on',showStops);AGENTS.forEach(a=>{if(agentData[a.id].allDocs.length)updateMarker(a,agentData[a.id].allDocs,true);});};
+window.toggleVisits=function(){showVisits=!showVisits;document.getElementById('btn-visits').textContent=`📍 Visits: ${showVisits?'ON':'OFF'}`;document.getElementById('btn-visits').classList.toggle('on',showVisits);AGENTS.forEach(a=>{if(agentData[a.id].allDocs.length)updateMarker(a,agentData[a.id].allDocs,true);});};
+window.toggleGfShow=function(){showGf=!showGf;document.getElementById('btn-gf-show').textContent=`⭕ Geofences: ${showGf?'ON':'OFF'}`;document.getElementById('btn-gf-show').classList.toggle('on',showGf);gfCircles.forEach(c=>c.setMap(showGf?map:null));};
+window.fitAll=function(){if(!map)return;const b=new google.maps.LatLngBounds();AGENTS.forEach(a=>{if(agentData[a.id].lat)b.extend({lat:agentData[a.id].lat,lng:agentData[a.id].lng});});if(!b.isEmpty())map.fitBounds(b);};
+
+// ── Summary tab ──
+window.loadSummary=function(){
+  const tbody=document.getElementById('summary-tbody');
+  tbody.innerHTML='';
+  AGENTS.forEach(a=>{
+    const ad=agentData[a.id];
+    const checkin=ad.checkIn?ad.checkIn.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'—';
+    const checkout=ad.lastSeen?ad.lastSeen.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'—';
+    const avgStop=ad.stops>0?Math.round(ad.timeline.filter(t=>t.type==='stop').reduce((s,t)=>s+(parseInt(t.desc)||0),0)/ad.stops):0;
+    const statusChip=`<span class="status-chip ${ad.statusText==='Moving'?'s-moving':ad.statusText==='Stopped'?'s-stopped':ad.statusText==='Paused'?'s-paused':'s-offline'}">${ad.statusText}</span>`;
+    tbody.innerHTML+=`<tr><td class="td-name">${a.name}</td><td>${checkin}</td><td>${checkout}</td><td class="td-green">${ad.km.toFixed(2)} km</td><td>${ad.stops}</td><td>${avgStop} min</td><td>${ad.pauses}</td><td style="color:#3C3489;">${ad.pauseReason||'—'}</td><td>${statusChip}</td></tr>`;
+  });
+};
+
+window.changeSummaryDate=function(d){const el=document.getElementById('summary-date');const dt=new Date(el.value);dt.setDate(dt.getDate()+d);el.value=dt.toISOString().split('T')[0];loadSummary();};
+
+window.exportSummaryCSV=function(){
+  const date=document.getElementById('summary-date').value;
+  let csv=`Agarwal Pharmaceuticals - Field Report - ${date}\n\nName,Check-In,Check-Out,KM Today,Stops,Avg Stop (min),Pauses,Pause Reason,Status\n`;
+  AGENTS.forEach(a=>{
+    const ad=agentData[a.id];
+    const avgStop=ad.stops>0?Math.round(ad.timeline.filter(t=>t.type==='stop').reduce((s,t)=>s+(parseInt(t.desc)||0),0)/ad.stops):0;
+    csv+=`${a.name},${ad.checkIn?ad.checkIn.toLocaleTimeString():'—'},${ad.lastSeen?ad.lastSeen.toLocaleTimeString():'—'},${ad.km.toFixed(2)},${ad.stops},${avgStop},${ad.pauses},"${ad.pauseReason||'—'}",${ad.statusText}\n`;
+  });
+  downloadCSV(csv,`field_report_${date}.csv`);
+  showToast('Report exported!');
+};
+
+window.exportAgentCSV=function(){
+  if(!selectedAgent)return;
+  const ad=agentData[selectedAgent];
+  let csv=`${ad.name} - Field Report - ${new Date().toLocaleDateString()}\n\nTime,Event\n`;
+  ad.timeline.forEach(t=>{ csv+=`${t.time.toLocaleString()},"${t.desc}"\n`; });
+  downloadCSV(csv,`${ad.name}_${new Date().toISOString().split('T')[0]}.csv`);
+  showToast(`${ad.name}'s report exported!`);
+};
+
+// ── History tab ──
+window.loadHistory=function(){
+  const days=parseInt(document.getElementById('history-range').value);
+  const grid=document.getElementById('history-grid');
+  grid.innerHTML='';
+  // Build from localStorage historical data
+  const stored=JSON.parse(localStorage.getItem('pharma_history')||'{}');
+  const agentFilter=document.getElementById('history-agent').value;
+  const now=new Date();
+  for(let i=0;i<days;i++){
+    const d=new Date(now); d.setDate(d.getDate()-i);
+    const key=d.toISOString().split('T')[0];
+    const dayData=stored[key];
+    if(!dayData && i>0) continue; // skip empty past days
+    const card=document.createElement('div');
+    card.className='history-card';
+    const agentsToShow=agentFilter==='all'?AGENTS:AGENTS.filter(a=>a.id===agentFilter);
+    let rows='';
+    agentsToShow.forEach(a=>{
+      const entry = (dayData&&dayData[a.id]) ? dayData[a.id] : (i===0?{km:agentData[a.id].km.toFixed(2),stops:agentData[a.id].stops,status:agentData[a.id].statusText}:null);
+      if(entry) rows+=`<tr><td>${a.name}</td><td class="td-green">${entry.km} km</td><td>${entry.stops} stops</td><td>${entry.status||'—'}</td></tr>`;
+    });
+    if(!rows) continue;
+    card.innerHTML=`<div class="history-card-date"><span>${d.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'})}</span></div><table class="history-mini-table"><tr><td><b>Name</b></td><td><b>KMs</b></td><td><b>Stops</b></td><td><b>Status</b></td></tr>${rows}</table>`;
+    grid.appendChild(card);
+  }
+  if(!grid.children.length) grid.innerHTML='<div style="color:#aaa;font-size:13px;padding:20px;">No historical data yet. Data builds up as your team uses the tracker daily.</div>';
+};
+
+function saveHistorySnapshot() {
+  const stored=JSON.parse(localStorage.getItem('pharma_history')||'{}');
+  const key=new Date().toISOString().split('T')[0];
+  stored[key]={};
+  AGENTS.forEach(a=>{stored[key][a.id]={km:agentData[a.id].km.toFixed(2),stops:agentData[a.id].stops,pauses:agentData[a.id].pauses,status:agentData[a.id].statusText,checkin:agentData[a.id].checkIn?.toLocaleTimeString()||'—'};});
+  localStorage.setItem('pharma_history',JSON.stringify(stored));
+}
+setInterval(saveHistorySnapshot,5*60*1000); // save every 5 min
+
+window.downloadBackup=function(){
+  const stored=JSON.parse(localStorage.getItem('pharma_history')||'{}');
+  const blob=new Blob([JSON.stringify(stored,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`pharma_tracker_backup_${new Date().toISOString().split('T')[0]}.json`;a.click();
+  showToast('Full backup downloaded!');
+};
+
+window.exportHistoryCSV=function(){
+  const stored=JSON.parse(localStorage.getItem('pharma_history')||'{}');
+  let csv='Date,Name,KMs,Stops,Pauses,Check-In,Status\n';
+  Object.keys(stored).sort().reverse().forEach(date=>{
+    AGENTS.forEach(a=>{
+      const e=stored[date][a.id];
+      if(e) csv+=`${date},${a.name},${e.km},${e.stops||0},${e.pauses||0},${e.checkin||'—'},${e.status||'—'}\n`;
+    });
+  });
+  downloadCSV(csv,`pharma_history_${new Date().toISOString().split('T')[0]}.csv`);
+  showToast('History exported!');
+};
+
+// ── Attendance ──
+window.loadAttendance=function(){
+  const tbody=document.getElementById('att-tbody');
+  tbody.innerHTML='';
+  const stored=JSON.parse(localStorage.getItem('pharma_history')||'{}');
+  const date=document.getElementById('att-date').value;
+  const dayData=stored[date]||{};
+  AGENTS.forEach(a=>{
+    const e=dayData[a.id];
+    const today=date===new Date().toISOString().split('T')[0];
+    const liveData=today?agentData[a.id]:null;
+    const checkin=liveData?.checkIn?liveData.checkIn.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):e?.checkin||'—';
+    const checkout=liveData?.lastSeen&&liveData.statusText!=='Offline'?'In field':liveData?.lastSeen?.toLocaleTimeString([])||e?.checkout||'—';
+    const km=liveData?liveData.km.toFixed(2):(e?.km||'0.00');
+    const isPresent=checkin!=='—';
+    const hrs=isPresent&&liveData?.checkIn?((Date.now()-liveData.checkIn)/3600000).toFixed(1):'—';
+    tbody.innerHTML+=`<tr><td style="font-weight:600;color:#3C3489;">${a.name}</td><td>${date}</td><td>${checkin}</td><td>${checkout}</td><td>${hrs} hrs</td><td>${km} km</td><td class="${isPresent?'att-present':'att-absent'}">${isPresent?'✅ Present':'❌ Absent'}</td></tr>`;
+  });
+};
+
+window.exportAttendance=function(){
+  const date=document.getElementById('att-date').value;
+  let csv=`Agarwal Pharmaceuticals - Attendance - ${date}\n\nName,Date,Check-In,KMs,Status\n`;
+  AGENTS.forEach(a=>{
+    const ad=agentData[a.id];
+    const checkin=ad.checkIn?ad.checkIn.toLocaleTimeString():'Absent';
+    csv+=`${a.name},${date},${checkin},${ad.km.toFixed(2)},${ad.checkIn?'Present':'Absent'}\n`;
+  });
+  downloadCSV(csv,`attendance_${date}.csv`);
+  showToast('Attendance exported!');
+};
+
+window.downloadAttendanceBackup=function(){
+  const stored=JSON.parse(localStorage.getItem('pharma_history')||'{}');
+  let csv='Date,Name,Check-In,KMs,Stops,Status\n';
+  Object.keys(stored).sort().forEach(date=>{
+    AGENTS.forEach(a=>{
+      const e=stored[date]?.[a.id];
+      if(e) csv+=`${date},${a.name},${e.checkin||'—'},${e.km||0},${e.stops||0},${e.status||'—'}\n`;
+    });
+  });
+  downloadCSV(csv,`attendance_backup_${new Date().toISOString().split('T')[0]}.csv`);
+  showToast('Attendance backup downloaded!');
+};
+
+// ── Geofences ──
+window.addGeofence=function(latLng){
+  const name=prompt('Name this location (e.g. Max Hospital, Apollo Chemist):');
+  if(!name)return;
+  const radius=parseInt(document.getElementById('gf-radius-select').value);
+  const gf={id:Date.now(),name,lat:latLng.lat(),lng:latLng.lng(),radius};
+  geofences.push(gf);
+  drawGfCircle(gf);
+  saveGeofences();
+  renderGeofenceList();
+  showToast(`Geofence added: ${name}`);
+};
+
+function drawGfCircle(gf){
+  const c=new google.maps.Circle({center:{lat:gf.lat,lng:gf.lng},radius:gf.radius,map:gfMap,fillColor:'#3C3489',fillOpacity:0.15,strokeColor:'#3C3489',strokeWeight:2});
+  const m=new google.maps.Marker({position:{lat:gf.lat,lng:gf.lng},map:gfMap,title:gf.name,label:{text:gf.name,color:'#3C3489',fontSize:'11px',fontWeight:'700'}});
+  gfCircles.push(c);
+}
+
+window.saveGeofences=function(){localStorage.setItem('pharma_geofences',JSON.stringify(geofences));showToast('Geofences saved!');};
+
+window.deleteGeofence=function(id){
+  geofences=geofences.filter(g=>g.id!==id);
+  saveGeofences();
+  // Redraw
+  gfCircles.forEach(c=>c.setMap(null));
+  gfCircles=[];
+  geofences.forEach(gf=>drawGfCircle(gf));
+  renderGeofenceList();
+};
+
+function renderGeofenceList(){
+  const el=document.getElementById('gf-list');
+  if(!geofences.length){el.innerHTML='<div style="font-size:12px;color:#aaa;">No geofences yet.</div>';return;}
+  el.innerHTML=geofences.map(gf=>`<div class="gf-item"><span class="gf-delete" onclick="deleteGeofence(${gf.id})">🗑</span><div class="gf-name">${gf.name}</div><div class="gf-radius">Radius: ${gf.radius}m</div></div>`).join('');
+}
+
+// ── Tab switching ──
+window.switchTab=function(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['live','summary','history','heatmap','geofence','attendance'][i]===name));
+  document.querySelectorAll('.tab-content').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='summary')loadSummary();
+  if(name==='history')loadHistory();
+  if(name==='attendance')loadAttendance();
+  if(name==='heatmap')setTimeout(updateHeatmap,100);
+};
+
+// ── Utilities ──
+function haversineM(lat1,lon1,lat2,lon2){
+  const R=6371000,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function downloadCSV(csv,filename){
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=filename;a.click();
+}
+
+function showToast(msg,dur=2500){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',dur);}
+window.closeModal=function(){document.getElementById('modal-overlay').classList.remove('visible');};
+</script>
+
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAL8_3PPQiocYs1xrvhErk4Se3_XNrTXn0&libraries=visualization&callback=initMap"></script>
+</body>
+</html>
